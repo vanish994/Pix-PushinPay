@@ -1,15 +1,14 @@
-# Usa imagem oficial do PHP com suporte a servidor embutido
 FROM php:8.2-cli
 
-# Instala dependências adicionais se necessário (curl, etc.)
-RUN apt-get update && apt-get install -y curl zip unzip && docker-php-ext-install curl
+# Instala apenas utilitários necessários (sem repetir o curl)
+RUN apt-get update && apt-get install -y zip unzip
 
-# Copia o projeto para dentro do container
+# Copia seu projeto para o container
 COPY . /app
 WORKDIR /app
 
-# Expõe a porta 8000 (Render irá mapear automaticamente)
+# Expõe a porta para o Render
 EXPOSE 8000
 
-# Inicia o servidor PHP embutido na porta correta
+# Inicia o servidor PHP
 CMD ["php", "-S", "0.0.0.0:8000"]
