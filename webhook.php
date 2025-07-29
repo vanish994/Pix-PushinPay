@@ -2,7 +2,6 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// Importa configuração
 $config = require __DIR__ . '/config.php';
 $expectedToken = $config['webhook_token'] ?? '';
 

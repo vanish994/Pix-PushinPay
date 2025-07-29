@@ -18,11 +18,13 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$error = curl_error($ch);
 curl_close($ch);
 
-// Exibe o resultado
 header('Content-Type: application/json');
 echo json_encode([
     'http_code' => $httpCode,
-    'response' => json_decode($response, true)
+    'response' => json_decode($response, true),
+    'raw' => $response,
+    'error' => $error
 ], JSON_PRETTY_PRINT);
