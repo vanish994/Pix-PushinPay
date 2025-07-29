@@ -1,40 +1,43 @@
 <?php
-// config.php deve estar incluído para acessar o webhook_token
+
+// Inclui configuração com o token
 require_once 'config.php';
 
-// Verifica o token na URL
+// Dados do CallMeBot
+$callmebot_phone = "558893662653";
+$callmebot_apikey = "8631999";
+
+// Verifica token da URL
 if (!isset($_GET['token']) || $_GET['token'] !== $webhook_token) {
     http_response_code(403);
-    echo json_encode(['error' => 'Token inválido']);
+    echo "Token inválido";
     exit;
 }
 
-// Lê o corpo da requisição JSON
+// Lê JSON recebido
 $data = json_decode(file_get_contents('php://input'), true);
 
-// Verifica se os dados principais foram enviados
+// Validação básica
 if (!isset($data['id'], $data['status'], $data['value'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Dados incompletos']);
+    echo "JSON inválido";
     exit;
 }
 
-// Dados do pagamento
-$id     = $data['id'];
+// Extrai dados
+$id = $data['id'];
 $status = $data['status'];
-$value  = $data['value'] / 100; // converte de centavos para reais
+$value = $data['value'];
+$valorFormatado = number_format($value / 100, 2, ',', '.');
 
-// Mensagem para o WhatsApp
-$mensagem = "💰 Novo pagamento recebido!\n\nID: $id\nStatus: $status\nValor: R$ " . number_format($value, 2, ',', '.');
+// Monta mensagem
+$msg = "💰 Novo pagamento recebido!\n\nID: $id\nStatus: $status\nValor: R$ $valorFormatado";
 
-// Envio via CallMeBot
-$numero_whatsapp = '558893662653'; // seu número com DDI
-$apikey          = '8631999';
+// Envia para o WhatsApp via CallMeBot
+$callmebot_url = "https://api.callmebot.com/whatsapp.php?phone=$callmebot_phone&text=" . urlencode($msg) . "&apikey=$callmebot_apikey";
 
-$url = "https://api.callmebot.com/whatsapp.php?phone=$numero_whatsapp&text=" . urlencode($mensagem) . "&apikey=$apikey";
+// Faz requisição para CallMeBot
+file_get_contents($callmebot_url);
 
-// Executa requisição
-file_get_contents($url);
-
-// Retorno para quem chamou o webhook
-echo json_encode(['status' => 'Webhook processado e mensagem enviada!']);
+// Retorna sucesso
+echo "✅ Webhook recebido e notificado com sucesso";
