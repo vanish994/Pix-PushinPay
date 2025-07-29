@@ -1,14 +1,16 @@
 FROM php:8.2-cli
 
-# Instala apenas utilitários necessários (sem repetir o curl)
+# Instala dependências básicas
 RUN apt-get update && apt-get install -y zip unzip
 
-# Copia seu projeto para o container
-COPY . /app
+# Define diretório de trabalho
 WORKDIR /app
 
-# Expõe a porta para o Render
+# Copia os arquivos para o container
+COPY . .
+
+# Expõe a porta padrão
 EXPOSE 8000
 
-# Inicia o servidor PHP
+# Inicia o servidor embutido do PHP
 CMD ["php", "-S", "0.0.0.0:8000"]
