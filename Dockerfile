@@ -1,16 +1,14 @@
-FROM php:8.2-cli
+# Usa imagem com Apache + PHP prontos
+FROM php:8.2-apache
 
-# Instala dependências básicas
-RUN apt-get update && apt-get install -y zip unzip
+# Copia todos os arquivos para o diretório servido pelo Apache
+COPY . /var/www/html/
 
-# Define diretório de trabalho
-WORKDIR /app
+# Permissões (opcional)
+RUN chown -R www-data:www-data /var/www/html
 
-# Copia os arquivos para o container
-COPY . .
+# Ativa mod_rewrite se quiser usar URLs amigáveis
+RUN a2enmod rewrite
 
-# Expõe a porta padrão
-EXPOSE 8000
-
-# Inicia o servidor embutido do PHP
-CMD ["php", "-S", "0.0.0.0:8000"]
+# Expõe a porta padrão do Apache
+EXPOSE 80
