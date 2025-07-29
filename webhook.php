@@ -1,34 +1,38 @@
 <?php
-// Ativa exibição de erros (somente para testes; remova em produção)
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// Caminho para o arquivo de log
-$logFile = __DIR__ . '/webhook.log';
+// Importa configuração
+$config = require __DIR__ . '/config.php';
+$expectedToken = $config['webhook_token'] ?? '';
 
-// Lê o corpo da requisição (JSON)
+if (!isset($_GET['token']) || $_GET['token'] !== $expectedToken) {
+    http_response_code(403);
+    exit('Acesso negado');
+}
+
 $payload = file_get_contents('php://input');
-
-// Decodifica o JSON recebido
 $data = json_decode($payload, true);
 
-// Verifica se o JSON é válido e contém um ID de transação
 if (!$data || !isset($data['id'])) {
-    file_put_contents($logFile, date('[Y-m-d H:i:s] ') . "⚠️ Payload inválido: $payload\n", FILE_APPEND);
     http_response_code(400);
     exit('Payload inválido');
 }
 
-// Extrai os dados principais da notificação
-$transactionId = $data['id'];
-$status = $data['status'] ?? 'desconhecido';
-$value = $data['value'] ?? 0;
-$timestamp = date('Y-m-d H:i:s');
+$db = new SQLite3(__DIR__ . '/transacoes.db');
+$db->exec("CREATE TABLE IF NOT EXISTS transacoes (
+    id TEXT PRIMARY KEY,
+    status TEXT,
+    valor INTEGER,
+    data_hora TEXT
+)");
 
-// Monta e salva a mensagem no log
-$logMessage = "[{$timestamp}] 🔔 Transação {$transactionId} - Status: {$status} - Valor: R$ " . number_format($value / 100, 2, ',', '.') . "\n";
-file_put_contents($logFile, $logMessage, FILE_APPEND);
+$stmt = $db->prepare("INSERT OR REPLACE INTO transacoes (id, status, valor, data_hora) VALUES (:id, :status, :valor, :data_hora)");
+$stmt->bindValue(':id', $data['id'], SQLITE3_TEXT);
+$stmt->bindValue(':status', $data['status'] ?? 'indefinido', SQLITE3_TEXT);
+$stmt->bindValue(':valor', $data['value'] ?? 0, SQLITE3_INTEGER);
+$stmt->bindValue(':data_hora', date('Y-m-d H:i:s'), SQLITE3_TEXT);
+$stmt->execute();
 
-// Envia resposta de sucesso
 http_response_code(200);
 echo '✅ Webhook recebido com sucesso';
