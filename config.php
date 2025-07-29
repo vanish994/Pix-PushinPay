@@ -1,4 +1,3 @@
 <?php
-return [
-    'webhook_token' => 'meu-token-seguro'
-];
+$webhook_token = 'meu-token-seguro';
+?>
