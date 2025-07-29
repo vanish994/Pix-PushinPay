@@ -1,37 +1,40 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// config.php deve estar incluído para acessar o webhook_token
+require_once 'config.php';
 
-$config = require __DIR__ . '/config.php';
-$expectedToken = $config['webhook_token'] ?? '';
-
-if (!isset($_GET['token']) || $_GET['token'] !== $expectedToken) {
+// Verifica o token na URL
+if (!isset($_GET['token']) || $_GET['token'] !== $webhook_token) {
     http_response_code(403);
-    exit('Acesso negado');
+    echo json_encode(['error' => 'Token inválido']);
+    exit;
 }
 
-$payload = file_get_contents('php://input');
-$data = json_decode($payload, true);
+// Lê o corpo da requisição JSON
+$data = json_decode(file_get_contents('php://input'), true);
 
-if (!$data || !isset($data['id'])) {
+// Verifica se os dados principais foram enviados
+if (!isset($data['id'], $data['status'], $data['value'])) {
     http_response_code(400);
-    exit('Payload inválido');
+    echo json_encode(['error' => 'Dados incompletos']);
+    exit;
 }
 
-$db = new SQLite3(__DIR__ . '/transacoes.db');
-$db->exec("CREATE TABLE IF NOT EXISTS transacoes (
-    id TEXT PRIMARY KEY,
-    status TEXT,
-    valor INTEGER,
-    data_hora TEXT
-)");
+// Dados do pagamento
+$id     = $data['id'];
+$status = $data['status'];
+$value  = $data['value'] / 100; // converte de centavos para reais
 
-$stmt = $db->prepare("INSERT OR REPLACE INTO transacoes (id, status, valor, data_hora) VALUES (:id, :status, :valor, :data_hora)");
-$stmt->bindValue(':id', $data['id'], SQLITE3_TEXT);
-$stmt->bindValue(':status', $data['status'] ?? 'indefinido', SQLITE3_TEXT);
-$stmt->bindValue(':valor', $data['value'] ?? 0, SQLITE3_INTEGER);
-$stmt->bindValue(':data_hora', date('Y-m-d H:i:s'), SQLITE3_TEXT);
-$stmt->execute();
+// Mensagem para o WhatsApp
+$mensagem = "💰 Novo pagamento recebido!\n\nID: $id\nStatus: $status\nValor: R$ " . number_format($value, 2, ',', '.');
 
-http_response_code(200);
-echo '✅ Webhook recebido com sucesso';
+// Envio via CallMeBot
+$numero_whatsapp = '558893662653'; // seu número com DDI
+$apikey          = '8631999';
+
+$url = "https://api.callmebot.com/whatsapp.php?phone=$numero_whatsapp&text=" . urlencode($mensagem) . "&apikey=$apikey";
+
+// Executa requisição
+file_get_contents($url);
+
+// Retorno para quem chamou o webhook
+echo json_encode(['status' => 'Webhook processado e mensagem enviada!']);
